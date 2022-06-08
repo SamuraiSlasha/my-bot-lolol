@@ -1,0 +1,150 @@
+if (not game:IsLoaded()) then
+	game.Loaded:Wait();
+end
+
+_G.LengthOfFlinging = 30
+
+_G.ChatMessage = 'testing'
+
+_G.Whitelist = {
+    1964094116
+}
+
+local InjuryBot = Instance.new("ScreenGui")
+InjuryBot.Name = "BotScript"
+InjuryBot.Parent = game.Players.LocalPlayer:WaitForChild("PlayerGui")
+InjuryBot.ResetOnSpawn = false
+function Flinger()
+    local script = Instance.new('LocalScript', InjuryBot)
+    
+    -- // Variables
+    local LP = game.Players.LocalPlayer
+    
+    
+    -- // Services
+    local InjurtVU = game:GetService("VirtualUser")
+    local RunService = game:GetService("RunService")
+    local HTTPService = game:GetService("HttpService")
+    local TPService = game:GetService("TeleportService")
+    
+    local function ServerHop()
+      local queue_on_teleport = syn and syn.queue_on_teleport or queue_on_teleport
+    	  if (queue_on_teleport) then
+    		queue_on_teleport("loadstring(game.HttpGet(game, \"https://raw.githubusercontent.com/deathllyhallows/BotFlinger/main/Main.lua\"))()");
+    	  end
+      local AvailableServers = HTTPService:JSONDecode(
+    	  game:HttpGet("https://games.roblox.com/v1/games/417267366/servers/Public?sortOrder=Asc&limit=100")
+      )
+    
+      while wait() do
+    	  local RandomServer = AvailableServers.data[math.random(#AvailableServers.data)]
+    	  if RandomServer.playing < RandomServer.maxPlayers - 2 and RandomServer.playing > 7 and RandomServer.id ~= game.JobId then
+    		  TPService:TeleportToPlaceInstance(game.PlaceId, RandomServer.id)
+    	  end
+      end
+    end
+    
+    local function hop()
+      ServerHop()
+      while wait(15) do
+    	  pcall(ServerHop)
+      end
+    end
+    
+    for i, v in next, getconnections(game:GetService("Players").LocalPlayer.Idled) do
+      v:Disable()
+    end
+    
+    RunService.Stepped:Connect(function()
+        if LP.Character and LP.Character:FindFirstChildOfClass("Humanoid") and LP.Character:FindFirstChildOfClass("Humanoid").Sit == true then
+            pcall(function()LP.Character:FindFirstChildOfClass("Humanoid"):ChangeState("Jumping")end)
+            pcall(function()LP.Character:FindFirstChildOfClass("Humanoid").Sit = false end)
+        end
+    end)
+    
+    local function Chat(msg)
+      game.ReplicatedStorage.DefaultChatSystemChatEvents.SayMessageRequest:FireServer(msg, "All")
+    end
+    
+    local success, fail = pcall(
+      function()
+    	  if #game.Players:GetPlayers() <= 3 then
+    	      print("Low player count")
+    	      hop()
+    	  end
+    	  
+    	  coroutine.wrap(function()
+    		  while wait(2.16) do
+    			Chat(_G.ChatMessage)
+    		  end
+    	  end)()
+    
+    	  spawn(function()
+    		  while wait(0.5) do
+    			  pcall(function()
+    				  for index, plr in pairs(game.Players:GetPlayers()) do
+    					  if plr ~= LP and not table.find(_G.Whitelist, plr.UserId) then
+    						  local character = LP.Character or LP.CharacterAdded:Wait()
+    						  local tchar = plr.Character
+    						  if character and tchar and tchar:FindFirstChild("HumanoidRootPart") and tchar:FindFirstChildOfClass("Humanoid") and tchar:FindFirstChildOfClass("Humanoid").Sit == false then
+        						  local HRP = character:FindFirstChild("HumanoidRootPart")
+                                  pcall(function()LP.Character:FindFirstChild("HumanoidRootPart").Anchored = false end)
+        						  local Flinging = nil
+        						  local nclipping = nil
+        						  local function Follow()
+        							  local function a()
+        								  HRP.CFrame = tchar.HumanoidRootPart.CFrame + tchar.Humanoid.MoveDirection
+        								  RunService.Stepped:Wait()
+        								  HRP.CFrame = tchar.HumanoidRootPart.CFrame + tchar.Humanoid.MoveDirection * .15
+        								  RunService.Stepped:Wait()
+        								  HRP.CFrame = tchar.HumanoidRootPart.CFrame + tchar.Humanoid.MoveDirection * 2.5
+        							  end
+        							  Flinging = RunService.RenderStepped:Connect(a)
+        						  end
+        						  local function noclipping()
+        							  local function a()
+        								  for i,v in next, character:GetChildren() do
+        									  if v:IsA('BasePart') then
+        										  v.CanCollide = false
+        									  end
+        								  end
+        							  end
+        							  nclipping = RunService.Stepped:Connect(a)
+        						  end
+        						  noclipping()
+        						  Follow()
+        						  if plr.Backpack:FindFirstChildOfClass("Tool") then
+        							  plr.Backpack:FindFirstChildOfClass("Tool").Parent = tchar
+        						  end
+        						  local BV = Instance.new('BodyAngularVelocity')
+        						  BV.Name = 'NMFling'
+        						  BV.AngularVelocity = Vector3.new(9e2, 80000, -9e2)
+        						  BV.MaxTorque = Vector3.new(1, 0.1, 1) * math.huge
+        						  BV.P = 9e9
+        						  BV.Parent = character.HumanoidRootPart
+        
+        						  for i,v in next, (character:GetChildren()) do
+        							  if v:IsA('BasePart') then
+        								  v.CanCollide = false
+        								  v.Massless = true
+        								  v.Velocity = Vector3.new(0, 0, 0)
+        							  end
+        						  end
+                                  wait(.5)
+                                  pcall(function()LP.Character:FindFirstChild("HumanoidRootPart").Anchored = true end)
+                                  BV:Destroy()
+                                  Flinging:Disconnect()
+                                  nclipping:Disconnect()
+                              end
+    					  end
+    				  end
+    			  end)	
+    		  end
+    	  end)
+      end
+    )
+    wait(_G.LengthOfFlinging)
+    print("Server Hopping")
+    hop()
+end
+coroutine.wrap(Flinger)()
